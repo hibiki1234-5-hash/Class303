@@ -1,0 +1,145 @@
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Rectangle;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+import javax.swing.Timer;
+
+public class BlockBreaker extends JPanel implements ActionListener, KeyListener {
+
+    int ballX = 100, ballY = 100;
+    int ballDX = 2, ballDY = 2;
+
+    int paddleX = 300;
+    final int PADDLE_WIDTH = 100;
+
+    Rectangle[] blocks;
+    boolean[] blockAlive;
+
+    int score = 0;
+    boolean gameOver = false;
+
+    Timer timer;
+
+    public BlockBreaker() {
+        setFocusable(true);
+        addKeyListener(this);
+
+        // ブロック初期化
+        blocks = new Rectangle[20];
+        blockAlive = new boolean[20];
+
+        int index = 0;
+        for (int y = 50; y < 150; y += 25) {
+            for (int x = 50; x < 750; x += 70) {
+                blocks[index] = new Rectangle(x, y, 60, 20);
+                blockAlive[index] = true;
+                index++;
+                if (index >= blocks.length) break;
+            }
+        }
+
+        timer = new Timer(10, this);
+        timer.start();
+    }
+
+    public void paintComponent(Graphics g) {
+        super.paintComponent(g);
+
+        // ボール
+        g.setColor(Color.RED);
+        g.fillOval(ballX, ballY, 20, 20);
+
+        // バー
+        g.setColor(Color.BLUE);
+        g.fillRect(paddleX, 500, PADDLE_WIDTH, 10);
+
+        // ブロック
+        g.setColor(Color.GREEN);
+        for (int i = 0; i < blocks.length; i++) {
+            if (blockAlive[i]) {
+                g.fillRect(blocks[i].x, blocks[i].y, blocks[i].width, blocks[i].height);
+            }
+        }
+
+        // スコア
+        g.setColor(Color.BLACK);
+        g.drawString("Score: " + score, 10, 20);
+
+        // ゲームオーバー
+        if (gameOver) {
+            g.setFont(new Font("Arial", Font.BOLD, 40));
+            g.drawString("GAME OVER", 250, 300);
+        }
+    }
+
+    public void actionPerformed(ActionEvent e) {
+        if (gameOver) return;
+
+        ballX += ballDX;
+        ballY += ballDY;
+
+        // 壁
+        if (ballX <= 0 || ballX >= getWidth() - 20) ballDX *= -1;
+        if (ballY <= 0) ballDY *= -1;
+
+        // バー
+        if (ballY >= 480 && ballX >= paddleX && ballX <= paddleX + PADDLE_WIDTH) {
+            ballDY *= -1;
+        }
+
+        // ブロック当たり判定
+        Rectangle ballRect = new Rectangle(ballX, ballY, 20, 20);
+        for (int i = 0; i < blocks.length; i++) {
+            if (blockAlive[i] && ballRect.intersects(blocks[i])) {
+                blockAlive[i] = false;
+                ballDY *= -1;
+                score += 10;
+                break;
+            }
+        }
+
+        // 落ちたらゲームオーバー
+        if (ballY > getHeight()) {
+            gameOver = true;
+        }
+
+        repaint();
+    }
+
+    public void keyPressed(KeyEvent e) {
+        if (e.getKeyCode() == KeyEvent.VK_LEFT) paddleX -= 20;
+        if (e.getKeyCode() == KeyEvent.VK_RIGHT) paddleX += 20;
+
+        // リスタート
+        if (e.getKeyCode() == KeyEvent.VK_SPACE && gameOver) {
+            score = 0;
+            ballX = 100;
+            ballY = 100;
+            gameOver = false;
+
+            for (int i = 0; i < blockAlive.length; i++) {
+                blockAlive[i] = true;
+            }
+        }
+    }
+
+    public void keyReleased(KeyEvent e) {}
+    public void keyTyped(KeyEvent e) {}
+
+    public static void main(String[] args) {
+        JFrame frame = new JFrame("ブロック崩し");
+        BlockBreaker game = new BlockBreaker();
+
+        frame.add(game);
+        frame.setSize(800, 600);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setVisible(true);
+    }
+}
